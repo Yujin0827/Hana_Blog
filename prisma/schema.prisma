@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Folder {
+  id    Int    @id @default(autoincrement()) @db.UnsignedTinyInt
+  title String @unique(map: "uniq_Folder_title") @db.VarChar(31)
+  Post  Post[]
+}
+
+model Post {
+  id        Int        @id @default(autoincrement()) @db.UnsignedInt
+  title     String     @db.VarChar(250)
+  content   String?    @db.Text
+  folder    Int        @db.UnsignedTinyInt
+  writer    Int        @db.UnsignedInt
+  createdAt DateTime   @default(now()) @db.Timestamp(0)
+  updatedAt DateTime   @default(now()) @db.Timestamp(0)
+  Comment   Comment[]
+  Folder    Folder     @relation(fields: [folder], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_ibfk_1")
+  User      User       @relation(fields: [writer], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_ibfk_2")
+  PostLike  PostLike[]
+
+  @@index([folder], map: "fk_Post_folder")
+  @@index([writer], map: "fk_Post_writer")
+  @@fulltext([title, content])
+}
+
+model User {
+  id       Int        @id @default(autoincrement()) @db.UnsignedInt
+  name     String     @db.VarChar(31)
+  email    String     @unique(map: "uniq_User_email") @db.VarChar(255)
+  image    String?    @db.VarChar(255)
+  passwd   String?    @db.VarChar(256)
+  selfad   String?    @db.VarChar(255)
+  isadmin  Boolean    @default(false)
+  Comment  Comment[]
+  Post     Post[]
+  PostLike PostLike[]
+}
+
+model StopWord {
+  value String? @db.VarChar(31)
+
+  @@ignore
+}
+
+model Comment {
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  content       String?   @db.Text
+  isdeleted     Boolean   @default(false)
+  postid        Int       @db.UnsignedInt
+  writer        Int       @db.UnsignedInt
+  parentid      Int?      @db.UnsignedInt
+  createdAt     DateTime  @default(now()) @db.Timestamp(0)
+  updatedAt     DateTime  @default(now()) @db.Timestamp(0)
+  Post          Post      @relation(fields: [postid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "comment_ibfk_1")
+  User          User      @relation(fields: [writer], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "comment_ibfk_2")
+  Comment       Comment?  @relation("CommentToComment", fields: [parentid], references: [id], onUpdate: NoAction, map: "comment_ibfk_3")
+  other_Comment Comment[] @relation("CommentToComment")
+
+  @@index([parentid], map: "fk_Comment_parent")
+  @@index([postid], map: "fk_Comment_postid")
+  @@index([writer], map: "fk_Comment_writer")
+}
+
+model PostLike {
+  id     Int  @id @default(autoincrement()) @db.UnsignedInt
+  userid Int  @db.UnsignedInt
+  postid Int  @db.UnsignedInt
+  User   User @relation(fields: [userid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "postlike_ibfk_1")
+  Post   Post @relation(fields: [postid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "postlike_ibfk_2")
+
+  @@unique([userid, postid], map: "uniq_PostLike_id")
+  @@index([postid], map: "fk_PostLike_post")
+}
